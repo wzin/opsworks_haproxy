@@ -18,8 +18,8 @@ No haproxy-specific attributes are used.
 
 Update the haproxy.cfg file with listener(s) for your sites/servers. Every application has it's own backend.
 
-Each application will have it's own backend 
-
+Using only the Amazon Opsworks panel, you create your own application. Check if your json is valid with : 
+ opsworks-agent-cli get_json.
 
   "haproxy": {
     "maxcon_factor_rails_app": 1024,
@@ -101,7 +101,7 @@ Each application will have it's own backend
   
 
 
-this will generate following configuration:
+Opsworks will automatically generate following haproxy configuration on the basis of above json:
 
 
  global
@@ -134,7 +134,7 @@ this will generate following configuration:
   stats auth haproxy:supersecretpassword
   stats uri /haproxy?stats
 
-# Set up application listeners here.
+ # Set up application listeners here.
 
  backend rails_app_servers_applicationxlogin
   balance roundrobin
