@@ -19,7 +19,9 @@ No haproxy-specific attributes are used.
 Update the haproxy.cfg file with listener(s) for your sites/servers. Every application has it's own backend.
 
 Using only the Amazon Opsworks panel, you create your own application. Check if your json is valid with : 
- opsworks-agent-cli get_json.
+ opsworks-agent-cli get_json
+
+Let's assume that your haproxy section of returned json of you stack looks like this:
 
   "haproxy": {
     "maxcon_factor_rails_app": 1024,
