@@ -20,7 +20,6 @@ Update the haproxy.cfg file with listener(s) for your sites/servers. Every appli
 
 Each application will have it's own backend 
 
-= begin
 
   "haproxy": {
     "maxcon_factor_rails_app": 1024,
@@ -93,18 +92,18 @@ Each application will have it's own backend
       }
     },
     "stats_user": "haproxy",
-    "stats_password": "waliays4",
+    "stats_password": "supersecretpassword",
     "static_backends": [
 
     ],
     "stats_url": "/haproxy?stats"
   }
   
-= end
+
 
 this will generate following configuration:
 
-= begin
+
  global
   log 127.0.0.1   local0
   log 127.0.0.1   local1 notice
@@ -269,7 +268,6 @@ this will generate following configuration:
 
   # all domains of node.js applications
 
-= end
 = AUTHOR:
 
 Wojciech Ziniewicz (<wojciech.ziniewicz@gmail.com>)
