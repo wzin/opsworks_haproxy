@@ -19,7 +19,9 @@ No haproxy-specific attributes are used.
 Update the haproxy.cfg file with listener(s) for your sites/servers. Every application has it's own backend.
 
 Each application will have it's own backend 
-=begin json
+
+= begin
+
   "haproxy": {
     "maxcon_factor_rails_app": 1024,
     "connect_timeout": "30s",
@@ -97,12 +99,13 @@ Each application will have it's own backend
     ],
     "stats_url": "/haproxy?stats"
   }
-=end
+  
+= end
 
 this will generate following configuration:
 
-=begin
-global
+= begin
+ global
   log 127.0.0.1   local0
   log 127.0.0.1   local1 notice
   #log loghost    local0 info
@@ -113,7 +116,7 @@ global
   group haproxy
   stats socket /tmp/haproxy.sock
 
-defaults
+ defaults
   log             global
   mode            http
   option          httplog
@@ -134,63 +137,57 @@ defaults
 
 # Set up application listeners here.
 
-backend rails_app_servers_applicationxlogin
+ backend rails_app_servers_applicationxlogin
   balance roundrobin
   option redispatch
   option forwardfor
   option httpchk GET / HTTP/1.0\r\nHost:\ login.applicationx.com
   server rails-app1 172.31.8.81:80 weight 8 maxconn 8192 check inter 30s
-backend rails_app_servers_applicationxhost
+ backend rails_app_servers_applicationxhost
   balance roundrobin
   option redispatch
   option forwardfor
   option httpchk GET / HTTP/1.0\r\nHost:\ www.applicationx.com
   server rails-app1 172.31.8.81:80 weight 8 maxconn 8192 check inter 30s
-backend rails_app_servers_superbappapp
+ backend rails_app_servers_superbappapp
   balance roundrobin
   option redispatch
   option forwardfor
   option httpchk GET / HTTP/1.0\r\nHost:\ appwider.com
   server rails-app1 172.31.8.81:80 weight 8 maxconn 8192 check inter 30s
-backend rails_app_servers_betaapp
+ backend rails_app_servers_betaapp
   balance roundrobin
   option redispatch
   option forwardfor
   option httpchk GET / HTTP/1.0\r\nHost:\ betaeasy.com
   server rails-app1 172.31.8.81:80 weight 8 maxconn 8192 check inter 30s
 
-backend rails_app_servers_ssl_applicationxlogin
+ backend rails_app_servers_ssl_applicationxlogin
   mode tcp
   balance roundrobin
   option redispatch
   option ssl-hello-chk
   server rails-app1 172.31.8.81:443 weight 8 maxconn 8192 check inter 30s
-backend rails_app_servers_ssl_applicationxhost
+ backend rails_app_servers_ssl_applicationxhost
   mode tcp
   balance roundrobin
   option redispatch
   option ssl-hello-chk
   server rails-app1 172.31.8.81:443 weight 8 maxconn 8192 check inter 30s
-backend rails_app_servers_ssl_superbappapp
+ backend rails_app_servers_ssl_superbappapp
   mode tcp
   balance roundrobin
   option redispatch
   option ssl-hello-chk
   server rails-app1 172.31.8.81:443 weight 8 maxconn 8192 check inter 30s
-backend rails_app_servers_ssl_betaapp
+ backend rails_app_servers_ssl_betaapp
   mode tcp
   balance roundrobin
   option redispatch
   option ssl-hello-chk
   server rails-app1 172.31.8.81:443 weight 8 maxconn 8192 check inter 30s
 
-
-
-
-
-
-
-frontend http-in
+ frontend http-in
   bind :80
 
   # all domains of Rails applications
@@ -241,7 +238,7 @@ frontend http-in
   use_backend rails_app_servers_betaapp if rails_application_betaapp_domain_betaapp
 
 
-frontend https-in
+ frontend https-in
   mode tcp
   bind :443
 
@@ -272,7 +269,7 @@ frontend https-in
 
   # all domains of node.js applications
 
-=end
+= end
 = AUTHOR:
 
 Wojciech Ziniewicz (<wojciech.ziniewicz@gmail.com>)
