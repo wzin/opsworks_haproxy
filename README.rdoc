@@ -18,6 +18,39 @@ No haproxy-specific attributes are used.
 
 Update the haproxy.cfg file with listener(s) for your sites/servers. Every application has it's own backend.
 
+= begin json
+
+ "haproxy": {
+    "check_interval": "30s",
+    "static_backends": [
+
+    ],
+    "rails_backends": [
+      {
+        "ip": "172.31.8.81",
+        "backends": 8,
+        "name": "rails-app1"
+      }
+    ],
+    "rails_applications": {
+      "applicationx": {
+        "mounted_at": null,
+        "application_type": "rails",
+        "domains": [
+          "login.aplicationx.com"
+        ]
+      },
+      "fundraiserapp": {
+        "mounted_at": null,
+        "application_type": "rails",
+        "domains": [
+          "betaapp.com",
+          "www.betaapp.com",
+          "*.betaapp.com"
+        ]
+      }
+    }
+= end
 = AUTHOR:
 
 Wojciech Ziniewicz (<wojciech.ziniewicz@gmail.com>)
