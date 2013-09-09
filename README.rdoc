@@ -6,7 +6,7 @@ Installs haproxy and prepares the configuration location.
 
 == Platform:
 
-Tested on Ubuntu 8.10.
+Tested on Ubuntu 8.10 and 12.04
 
 == Cookbooks:
 
@@ -16,22 +16,261 @@ No haproxy-specific attributes are used.
 
 = USAGE:
 
-Update the haproxy.cfg file with listener(s) for your sites/servers.
+Update the haproxy.cfg file with listener(s) for your sites/servers. Every application has it's own backend.
 
-= LICENSE and AUTHOR:
-      
-Author:: Joshua Timberman (<joshua@opscode.com>)
+Using only the Amazon Opsworks panel, you create your own application. Check if your json is valid with : 
+ opsworks-agent-cli get_json
 
-Copyright:: 2009, Opscode, Inc
+Let's assume that your haproxy section of returned json of you stack looks like this:
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+  "haproxy": {
+    "maxcon_factor_rails_app": 1024,
+    "connect_timeout": "30s",
+    "static_applications": {
+    },
+    "health_check_url": "/",
+    "php_applications": {
+    },
+    "nodejs_backends": [
 
-    http://www.apache.org/licenses/LICENSE-2.0
+    ],
+    "health_check_method": "GET",
+    "nodejs_applications": {
+    },
+    "rails_backends": [
+      {
+        "ip": "172.31.8.81",
+        "name": "rails-app1",
+        "backends": 8
+      }
+    ],
+    "enable_stats": true,
+    "check_interval": "30s",
+    "maxcon_factor_rails_app_ssl": 1024,
+    "php_backends": [
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+    ],
+    "rails_applications": {
+      "applicationxlogin": {
+        "mounted_at": null,
+        "application_type": "rails",
+        "domains": [
+          "login.applicationx.com",
+          "applicationxlogin"
+        ]
+      },
+      "superbappapp": {
+        "mounted_at": null,
+        "application_type": "rails",
+        "domains": [
+          "appwider.com",
+          "www.appwider.com",
+          "*.appraise-app.com",
+          "*.appwider.com",
+          "superbappapp"
+        ]
+      },
+      "betaapp": {
+        "mounted_at": null,
+        "application_type": "rails",
+        "domains": [
+          "betaeasy.com",
+          "www.betaeasy.com",
+          "schoolbureau.co.uk",
+          "www.schoolbureau.co.uk",
+          "betaapp.com",
+          "www.betaapp.com",
+          "betaapp"
+        ]
+      },
+      "applicationxhost": {
+        "mounted_at": null,
+        "application_type": "rails",
+        "domains": [
+          "www.applicationx.com",
+          "*.applicationx.com",
+          "applicationxhost"
+        ]
+      }
+    },
+    "stats_user": "haproxy",
+    "stats_password": "supersecretpassword",
+    "static_backends": [
+
+    ],
+    "stats_url": "/haproxy?stats"
+  }
+  
+
+
+Opsworks will automatically generate following haproxy configuration on the basis of above json:
+
+
+ global
+  log 127.0.0.1   local0
+  log 127.0.0.1   local1 notice
+  #log loghost    local0 info
+  maxconn 80000
+  #debug
+  #quiet
+  user haproxy
+  group haproxy
+  stats socket /tmp/haproxy.sock
+
+ defaults
+  log             global
+  mode            http
+  option          httplog
+  option          dontlognull
+  retries         3
+  option          redispatch
+  maxconn        80000
+  timeout client 60s             # Client and server timeout must match the longest
+  timeout server 60s             # time we may wait for a response from the server.
+  timeout queue  120s              # Don't queue requests too long if saturated.
+  timeout connect 30s           # There's no reason to change this one.
+  timeout http-request 30s	# A complete request may never take that long.
+  option          httpclose                                         # disable keepalive (HAProxy does not yet support the HTTP keep-alive mode)
+  option          abortonclose                                      # enable early dropping of aborted requests from pending queue
+  option          httpchk                                           # enable HTTP protocol to check on servers health
+  stats auth haproxy:supersecretpassword
+  stats uri /haproxy?stats
+
+ # Set up application listeners here.
+
+ backend rails_app_servers_applicationxlogin
+  balance roundrobin
+  option redispatch
+  option forwardfor
+  option httpchk GET / HTTP/1.0\r\nHost:\ login.applicationx.com
+  server rails-app1 172.31.8.81:80 weight 8 maxconn 8192 check inter 30s
+ backend rails_app_servers_applicationxhost
+  balance roundrobin
+  option redispatch
+  option forwardfor
+  option httpchk GET / HTTP/1.0\r\nHost:\ www.applicationx.com
+  server rails-app1 172.31.8.81:80 weight 8 maxconn 8192 check inter 30s
+ backend rails_app_servers_superbappapp
+  balance roundrobin
+  option redispatch
+  option forwardfor
+  option httpchk GET / HTTP/1.0\r\nHost:\ appwider.com
+  server rails-app1 172.31.8.81:80 weight 8 maxconn 8192 check inter 30s
+ backend rails_app_servers_betaapp
+  balance roundrobin
+  option redispatch
+  option forwardfor
+  option httpchk GET / HTTP/1.0\r\nHost:\ betaeasy.com
+  server rails-app1 172.31.8.81:80 weight 8 maxconn 8192 check inter 30s
+
+ backend rails_app_servers_ssl_applicationxlogin
+  mode tcp
+  balance roundrobin
+  option redispatch
+  option ssl-hello-chk
+  server rails-app1 172.31.8.81:443 weight 8 maxconn 8192 check inter 30s
+ backend rails_app_servers_ssl_applicationxhost
+  mode tcp
+  balance roundrobin
+  option redispatch
+  option ssl-hello-chk
+  server rails-app1 172.31.8.81:443 weight 8 maxconn 8192 check inter 30s
+ backend rails_app_servers_ssl_superbappapp
+  mode tcp
+  balance roundrobin
+  option redispatch
+  option ssl-hello-chk
+  server rails-app1 172.31.8.81:443 weight 8 maxconn 8192 check inter 30s
+ backend rails_app_servers_ssl_betaapp
+  mode tcp
+  balance roundrobin
+  option redispatch
+  option ssl-hello-chk
+  server rails-app1 172.31.8.81:443 weight 8 maxconn 8192 check inter 30s
+
+ frontend http-in
+  bind :80
+
+  # all domains of Rails applications
+  acl rails_application_applicationxlogin_domain_login.applicationx.com hdr_end(host) -i login.applicationx.com
+  acl rails_application_applicationxlogin_domain_applicationxlogin hdr_end(host) -i applicationxlogin
+  acl rails_application_applicationxhost_domain_www.applicationx.com hdr_end(host) -i www.applicationx.com
+  acl rails_application_applicationxhost_domain__.applicationx.com hdr_end(host) -i *.applicationx.com
+  acl rails_application_applicationxhost_domain_applicationxhost hdr_end(host) -i applicationxhost
+  acl rails_application_superbappapp_domain_appwider.com hdr_end(host) -i appwider.com
+  acl rails_application_superbappapp_domain_www.appwider.com hdr_end(host) -i www.appwider.com
+  acl rails_application_superbappapp_domain__.appraise-app.com hdr_end(host) -i *.appraise-app.com
+  acl rails_application_superbappapp_domain__.appwider.com hdr_end(host) -i *.appwider.com
+  acl rails_application_superbappapp_domain_superbappapp hdr_end(host) -i superbappapp
+  acl rails_application_betaapp_domain_betaeasy.com hdr_end(host) -i betaeasy.com
+  acl rails_application_betaapp_domain_www.betaeasy.com hdr_end(host) -i www.betaeasy.com
+  acl rails_application_betaapp_domain_schoolbureau.co.uk hdr_end(host) -i schoolbureau.co.uk
+  acl rails_application_betaapp_domain_www.schoolbureau.co.uk hdr_end(host) -i www.schoolbureau.co.uk
+  acl rails_application_betaapp_domain_betaapp.com hdr_end(host) -i betaapp.com
+  acl rails_application_betaapp_domain_www.betaapp.com hdr_end(host) -i www.betaapp.com
+  acl rails_application_betaapp_domain_betaapp hdr_end(host) -i betaapp
+
+  # all domains of PHP applications
+
+  # all domains of node.js applications
+
+  # all domains of static applications
+
+  # choose backend
+
+
+
+  use_backend rails_app_servers_applicationxlogin if rails_application_applicationxlogin_domain_login.applicationx.com
+  use_backend rails_app_servers_applicationxlogin if rails_application_applicationxlogin_domain_applicationxlogin
+  use_backend rails_app_servers_applicationxhost if rails_application_applicationxhost_domain_www.applicationx.com
+  use_backend rails_app_servers_applicationxhost if rails_application_applicationxhost_domain__.applicationx.com
+  use_backend rails_app_servers_applicationxhost if rails_application_applicationxhost_domain_applicationxhost
+  use_backend rails_app_servers_superbappapp if rails_application_superbappapp_domain_appwider.com
+  use_backend rails_app_servers_superbappapp if rails_application_superbappapp_domain_www.appwider.com
+  use_backend rails_app_servers_superbappapp if rails_application_superbappapp_domain__.appraise-app.com
+  use_backend rails_app_servers_superbappapp if rails_application_superbappapp_domain__.appwider.com
+  use_backend rails_app_servers_superbappapp if rails_application_superbappapp_domain_superbappapp
+  use_backend rails_app_servers_betaapp if rails_application_betaapp_domain_betaeasy.com
+  use_backend rails_app_servers_betaapp if rails_application_betaapp_domain_www.betaeasy.com
+  use_backend rails_app_servers_betaapp if rails_application_betaapp_domain_schoolbureau.co.uk
+  use_backend rails_app_servers_betaapp if rails_application_betaapp_domain_www.schoolbureau.co.uk
+  use_backend rails_app_servers_betaapp if rails_application_betaapp_domain_betaapp.com
+  use_backend rails_app_servers_betaapp if rails_application_betaapp_domain_www.betaapp.com
+  use_backend rails_app_servers_betaapp if rails_application_betaapp_domain_betaapp
+
+
+ frontend https-in
+  mode tcp
+  bind :443
+
+  # all domains of Rails applications
+  acl rails_applications_ssl_applicationxlogin hdr_end(host) -i login.applicationx.com
+  acl rails_applications_ssl_applicationxlogin hdr_end(host) -i applicationxlogin
+  use_backend rails_app_servers_ssl_applicationxlogin if rails_applications_ssl_applicationxlogin
+  acl rails_applications_ssl_applicationxhost hdr_end(host) -i www.applicationx.com
+  acl rails_applications_ssl_applicationxhost hdr_end(host) -i *.applicationx.com
+  acl rails_applications_ssl_applicationxhost hdr_end(host) -i applicationxhost
+  use_backend rails_app_servers_ssl_applicationxhost if rails_applications_ssl_applicationxhost
+  acl rails_applications_ssl_superbappapp hdr_end(host) -i appwider.com
+  acl rails_applications_ssl_superbappapp hdr_end(host) -i www.appwider.com
+  acl rails_applications_ssl_superbappapp hdr_end(host) -i *.appraise-app.com
+  acl rails_applications_ssl_superbappapp hdr_end(host) -i *.appwider.com
+  acl rails_applications_ssl_superbappapp hdr_end(host) -i superbappapp
+  use_backend rails_app_servers_ssl_superbappapp if rails_applications_ssl_superbappapp
+  acl rails_applications_ssl_betaapp hdr_end(host) -i betaeasy.com
+  acl rails_applications_ssl_betaapp hdr_end(host) -i www.betaeasy.com
+  acl rails_applications_ssl_betaapp hdr_end(host) -i schoolbureau.co.uk
+  acl rails_applications_ssl_betaapp hdr_end(host) -i www.schoolbureau.co.uk
+  acl rails_applications_ssl_betaapp hdr_end(host) -i betaapp.com
+  acl rails_applications_ssl_betaapp hdr_end(host) -i www.betaapp.com
+  acl rails_applications_ssl_betaapp hdr_end(host) -i betaapp
+  use_backend rails_app_servers_ssl_betaapp if rails_applications_ssl_betaapp
+
+  # all domains of PHP applications
+
+  # all domains of node.js applications
+
+= AUTHOR:
+
+Wojciech Ziniewicz (<wojciech.ziniewicz@gmail.com>)
+
